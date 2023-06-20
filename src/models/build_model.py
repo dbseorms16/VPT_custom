@@ -9,6 +9,7 @@ from .resnet import ResNet
 from .convnext import ConvNeXt
 from .vit_models import ViT, Swin, SSLViT
 from ..utils import logging
+from .SAM import SamPredictor
 logger = logging.get_logger("visual_prompt")
 # Supported model types
 _MODEL_TYPES = {
@@ -17,6 +18,7 @@ _MODEL_TYPES = {
     "vit": ViT,
     "swin": Swin,
     "ssl-vit": SSLViT,
+    "sam" : SamPredictor
 }
 
 
@@ -33,10 +35,11 @@ def build_model(cfg):
 
     # Construct the model
     train_type = cfg.MODEL.TYPE
-    model = _MODEL_TYPES[train_type](cfg)
-
+    device = get_current_device()
+    model = _MODEL_TYPES[train_type](cfg, device)
     log_model_info(model, verbose=cfg.DBG)
-    model, device = load_model_to_device(model, cfg)
+    ####
+    # model, device = load_model_to_device(model, cfg)
     logger.info(f"Device used for model: {device}")
 
     return model, device
@@ -46,9 +49,10 @@ def log_model_info(model, verbose=False):
     """Logs model info"""
     if verbose:
         logger.info(f"Classification Model:\n{model}")
-    model_total_params = sum(p.numel() for p in model.parameters())
+    print(model)
+    model_total_params = sum(p.numel() for p in model.model.parameters())
     model_grad_params = sum(
-        p.numel() for p in model.parameters() if p.requires_grad)
+        p.numel() for p in model.model.parameters() if p.requires_grad)
     logger.info("Total Parameters: {0}\t Gradient Parameters: {1}".format(
         model_total_params, model_grad_params))
     logger.info("tuned percent:%.3f"%(model_grad_params/model_total_params*100))
@@ -62,7 +66,7 @@ def get_current_device():
         cur_device = torch.device('cpu')
     return cur_device
 
-
+###여기서가 문제임....
 def load_model_to_device(model, cfg):
     cur_device = get_current_device()
     if torch.cuda.is_available():

@@ -2,7 +2,10 @@ GIT_TOKENS.md
 run_examples.sh
 *.npy
 *.zip
-
+*.gitignore
+*.npz
+*.json
+*.txt
 # General
 .DS_Store?
 .DS_Store

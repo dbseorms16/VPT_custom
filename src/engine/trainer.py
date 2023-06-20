@@ -18,6 +18,7 @@ from ..solver.losses import build_loss
 from ..utils import logging
 from ..utils.train_utils import AverageMeter, gpu_mem_usage
 
+import numpy as np
 logger = logging.get_logger("visual_prompt")
 
 
@@ -41,8 +42,9 @@ class Trainer():
         self.device = device
 
         # solver related
+        # print(self.model.model.prompt_encoder)
         logger.info("\tSetting up the optimizer...")
-        self.optimizer = make_optimizer([self.model], cfg.SOLVER)
+        self.optimizer = make_optimizer([self.model.model.prompt_encoder], cfg.SOLVER)
         self.scheduler = make_scheduler(self.optimizer, cfg.SOLVER)
         self.cls_criterion = build_loss(self.cfg)
 
@@ -83,7 +85,20 @@ class Trainer():
 
         # forward
         with torch.set_grad_enabled(is_train):
-            outputs = self.model(inputs)  # (batchsize, num_cls)
+            self.model.set_torch_image(inputs, (1024, 1024))
+            
+            outputss, scores, logits = self.model.predict_torch(
+                point_coords=None,
+                point_labels=None,
+                boxes = None,
+                multimask_output=True)
+
+            scores = scores[0].clone().detach().cpu().numpy()
+
+            new_index = np.argmax(scores)
+            outputs = outputss[:, new_index]
+                
+            # outputs = self.model(inputs)  # (batchsize, num_cls)
             if self.cfg.DBG:
                 logger.info(
                     "shape of model output: {}, targets: {}".format(
@@ -115,26 +130,27 @@ class Trainer():
         # =======backward and optim step only if in training phase... =========
         if is_train:
             self.optimizer.zero_grad()
+            loss.requires_grad_(True)
             loss.backward()
             self.optimizer.step()
 
         return loss, outputs
 
-    def get_input(self, data):
-        if not isinstance(data["image"], torch.Tensor):
-            for k, v in data.items():
-                data[k] = torch.from_numpy(v)
+    # def get_input(self, data, model):
+    #     input_dict = {}
 
-        inputs = data["image"].float()
-        labels = data["label"]
-        return inputs, labels
+    #     input_dict['img'] = inputs[0].to(f'{model.device}')
+    #     input_dict['train_mask'] = inputs[1].to(f'{model.device}')
+    
+    #     return input_dict
 
     def train_classifier(self, train_loader, val_loader, test_loader):
         """
         Train a classifier using epoch
         """
         # save the model prompt if required before training
-        self.model.eval()
+        self.model.model.image_encoder.eval()
+        self.model.model.mask_decoder.eval()
         self.save_prompt(0)
 
         # setup training epoch params
@@ -148,8 +164,7 @@ class Trainer():
         batch_time = AverageMeter('Time', ':6.3f')
         data_time = AverageMeter('Data', ':6.3f')
 
-        self.cls_weights = train_loader.dataset.get_class_weights(
-            self.cfg.DATA.CLASS_WEIGHTS_TYPE)
+        self.cls_weights = None
         # logger.info(f"class weights: {self.cls_weights}")
         patience = 0  # if > self.cfg.SOLVER.PATIENCE, stop training
 
@@ -167,7 +182,7 @@ class Trainer():
             )
 
             # Enable training mode
-            self.model.train()
+            self.model.model.prompt_encoder.train()
 
             end = time.time()
 
@@ -176,7 +191,8 @@ class Trainer():
                     # if debugging, only need to see the first few iterations
                     break
                 
-                X, targets = self.get_input(input_data)
+                # input_dict = self.get_input(input_data, self.model)
+                X, targets = input_data[0], input_data[1]
                 # logger.info(X.shape)
                 # logger.info(targets.shape)
                 # measure data loading time
@@ -188,6 +204,7 @@ class Trainer():
                     # continue
                     return None
 
+                print(train_loss.item())
                 losses.update(train_loss.item(), X.shape[0])
 
                 # measure elapsed time

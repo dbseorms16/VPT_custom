@@ -75,8 +75,12 @@ class PromptedTransformer(Transformer):
     def incorporate_prompt(self, x):
         # combine prompt embeddings with image-patch embeddings
         B = x.shape[0]
+        # print(self.prompt_embeddings)
         # after CLS token, all before image patches
         x = self.embeddings(x)  # (batch_size, 1 + n_patches, hidden_dim)
+        
+        # print(self.prompt_embeddings.shape)
+        # print(self.prompt_dropout(self.prompt_proj(self.prompt_embeddings).expand(B, -1, -1)).shape)
         x = torch.cat((
                 x[:, :1, :],
                 self.prompt_dropout(self.prompt_proj(self.prompt_embeddings).expand(B, -1, -1)),
@@ -122,7 +126,8 @@ class PromptedTransformer(Transformer):
 
 
                 hidden_states, weights = self.encoder.layer[i](hidden_states)
-
+            
+            
             if self.encoder.vis:
                 attn_weights.append(weights)
 

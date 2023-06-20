@@ -67,8 +67,30 @@ class SoftmaxLoss(SigmoidLoss):
         return torch.sum(loss) / targets.shape[0]
 
 
+class SAMLoss(nn.Module):
+
+    def __init__(self, cfg=None):
+        
+        super().__init__()
+        self.BCE_loss = torch.nn.BCELoss(reduce=False, reduction='none')
+
+    def is_single(self):
+        return True
+
+    def is_local(self):
+        return False
+    
+    def loss(self, logits, targets):
+        loss = self.BCE_loss(logits, targets)
+        return torch.sum(loss) / targets.shape[0]
+
+    def forward(self, pred_logits, targets, per_cls_weights=None, multihot_targets=False):
+        loss = self.loss(pred_logits, targets)
+        return loss
+
 LOSS = {
     "softmax": SoftmaxLoss,
+    "sam" : SAMLoss
 }
 
 

@@ -9,6 +9,8 @@ from ..utils import logging
 from .datasets.json_dataset import (
     CUB200Dataset, CarsDataset, DogsDataset, FlowersDataset, NabirdsDataset
 )
+import torch.distributed as dist
+import os
 
 logger = logging.get_logger("visual_prompt")
 _DATASET_CATALOG = {
@@ -19,6 +21,14 @@ _DATASET_CATALOG = {
     "nabirds": NabirdsDataset,
 }
 
+dist_url = 'env://'
+rank = int(os.environ['RANK'])
+world_size = int(os.environ['WORLD_SIZE'])
+local_rank = int(os.environ['LOCAL_RANK'])
+    
+dist.init_process_group("nccl", init_method=dist_url, world_size=world_size, rank=rank)
+torch.cuda.set_device(local_rank)
+dist.barrier()
 
 def _construct_loader(cfg, split, batch_size, shuffle, drop_last):
     """Constructs the data loader for the given dataset."""
@@ -27,8 +37,19 @@ def _construct_loader(cfg, split, batch_size, shuffle, drop_last):
     # Construct the dataset
     if dataset_name.startswith("vtab-"):
         # import the tensorflow here only if needed
-        from .datasets.tf_dataset import TFDataset
-        dataset = TFDataset(cfg, split)
+        # from .datasets.tf_dataset import TFDataset
+        # dataset = TFDataset(cfg, split)
+        from .datasets.custom_dataset import CustomText
+        from .datasets.augmentation import Augmentation
+        dataset = CustomText(
+        data_root='../SAM_customizing/data/Custom_data',
+        is_training=True,
+        load_memory=False,
+        cfg=cfg,
+        transform= Augmentation(size=1024, mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225))
+    )
+        
+        
     else:
         assert (
             dataset_name in _DATASET_CATALOG.keys()

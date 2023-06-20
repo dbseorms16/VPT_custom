@@ -23,6 +23,7 @@ from src.utils.file_io import PathManager
 from launch import default_argument_parser, logging_train_setup
 warnings.filterwarnings("ignore")
 
+os.environ['CUDA_VISIBLE_DEVICES'] = "1"
 
 def setup(args):
     """
@@ -33,7 +34,7 @@ def setup(args):
     cfg.merge_from_list(args.opts)
 
     # setup dist
-    cfg.DIST_INIT_PATH = "tcp://{}:12399".format(os.environ["SLURMD_NODENAME"])
+    # cfg.DIST_INIT_PATH = "tcp://{}:12399".format(os.environ["SLURMD_NODENAME"])
 
     # setup output dir
     # output_dir / data_name / feature_name / lr_wd / run1
@@ -55,9 +56,9 @@ def setup(args):
             break
         else:
             count += 1
-    if count > cfg.RUN_N_TIMES:
-        raise ValueError(
-            f"Already run {cfg.RUN_N_TIMES} times for {output_folder}, no need to run more")
+    # if count > cfg.RUN_N_TIMES:
+    #     raise ValueError(
+    #         f"Already run {cfg.RUN_N_TIMES} times for {output_folder}, no need to run more")
 
     cfg.freeze()
     return cfg

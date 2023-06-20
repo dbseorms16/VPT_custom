@@ -65,7 +65,6 @@ class ViT(nn.Module):
         self.enc, self.feat_dim = build_vit_sup_models(
             cfg.DATA.FEATURE, cfg.DATA.CROPSIZE, prompt_cfg, cfg.MODEL.MODEL_ROOT, adapter_cfg, load_pretrain, vis
         )
-
         # linear, prompt, cls, cls+prompt, partial_1
         if transfer_type == "partial-1":
             total_layer = len(self.enc.transformer.encoder.layer)
@@ -100,6 +99,7 @@ class ViT(nn.Module):
                 if "prompt" not in k and "embeddings.patch_embeddings.weight" not in k  and "embeddings.patch_embeddings.bias" not in k:
                     p.requires_grad = False
 
+        ## 여기 prompt transformer.deep_prompt_embeddings, transformer.prompt_embeddings 만 학습함
         elif transfer_type == "prompt":
             for k, p in self.enc.named_parameters():
                 if "prompt" not in k:
@@ -170,8 +170,8 @@ class ViT(nn.Module):
             side_output = side_output.view(side_output.size(0), -1)
             side_output = self.side_projection(side_output)
 
-        if self.froze_enc and self.enc.training:
-            self.enc.eval()
+        # if self.froze_enc and self.enc.training:
+        #     self.enc.eval()
         x = self.enc(x)  # batch_size x self.feat_dim
 
         if self.side is not None:
