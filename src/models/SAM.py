@@ -468,15 +468,15 @@ class SamPredictor:
                                 )
         _ = sam_model.to(device=device)
         
+        self.transform = ResizeLongestSide(sam_model.image_encoder.img_size)
         if cfg.NUM_GPUS > 1:
             # Make model replica operate on the current device
-            model = torch.nn.parallel.DistributedDataParallel(
-                module=model, device_ids=[device], output_device=device,
+            sam_model = torch.nn.parallel.DistributedDataParallel(
+                module=sam_model, device_ids=[device], output_device=device,
                 find_unused_parameters=True,
             )
         
-        self.model = sam_model
-        self.transform = ResizeLongestSide(sam_model.image_encoder.img_size)
+        self.model = sam_model.module
         # size = 1024
         self.reset_image()
 

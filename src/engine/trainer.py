@@ -44,6 +44,8 @@ class Trainer():
         # solver related
         # print(self.model.model.prompt_encoder)
         logger.info("\tSetting up the optimizer...")
+        # module
+        # self.model.model.prompt_encoder
         self.optimizer = make_optimizer([self.model.model.prompt_encoder], cfg.SOLVER)
         self.scheduler = make_scheduler(self.optimizer, cfg.SOLVER)
         self.cls_criterion = build_loss(self.cfg)

@@ -78,6 +78,8 @@ def default_argument_parser():
         default=None,
         nargs=argparse.REMAINDER,
     )
+    parser.add_argument("--local_rank", type=int, default=0, help="The device to run generation on.")
+    
 
     return parser
 

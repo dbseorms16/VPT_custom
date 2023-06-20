@@ -74,11 +74,10 @@ output_dir=./result
 # done
 
 for seed in "42" "44" "82" "100" "800"; do
-    python -m torch.distributed.launch --nproc_per_node=7 
-        train.py \
+    python -m torch.distributed.launch --nproc_per_node=7 train.py \
         --config-file configs/prompt/custom.yaml \
         MODEL.TYPE "sam" \
-        DATA.BATCH_SIZE "1" \
+        DATA.BATCH_SIZE "14" \
         MODEL.PROMPT.NUM_TOKENS "100" \
         MODEL.PROMPT.DEEP "True" \
         MODEL.PROMPT.DROPOUT "0.1" \
